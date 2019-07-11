@@ -1,6 +1,7 @@
+# Zenduty Nagios Integration
 Nagios is a free and open source computer-software application that monitors systems, networks and infrastructure. Nagios offers monitoring and alerting services for servers, switches, applications and services. To integrate Nagios with Zenduty, complete the following steps:
 
-## On the Zenduty Dashboard:
+### On the Zenduty Dashboard:
 
 1. To add a new Nagios integration, go to "Teams" on Zenduty and click on the "Manage" button corresponding to the team you want to add the integration to.
 
@@ -8,280 +9,71 @@ Nagios is a free and open source computer-software application that monitors sys
 
 3. Go to "Integrations" and then "Add New Integration". Give it a name and select the application "Nagios" from the dropdown menu.
 
-4. Go to "Configure" under your integrations and copy the webhooks URL generated.
+4. Go to "Configure" under your integrations and copy the integration key generated.
 
-## In Nagios: 
+### In Nagios: 
 
-### ON THE REMOTE HOST:
-
-**1. Installing the Nagios plugins:**
-	Move into the directory for downloads. If not make one.
-
+1. Install Nagios Core on your system.
+2. Download the Zenduty-Nagios files by following the steps given below:
 ```
-$ mkdir ~/Downloads
-$ cd ~/Downloads
+$ cd /tmp
+$ git clone https://github.com/Zenduty/zd-nagios.git
+$ cd zd-nagios
 ```
-
-Download the source code tarball of the Nagios plugins (visit http://www.nagios.org/downloads/ for links to the latest versions). At the time of writing, the latest stable version of the Nagios plugins was 2.1.1.
-
+3. Open zenduty_nagios.cfg file and enter the integration key provided into the “pager” field.
+4. Move the Nagios Core configuration file into place. For Debian-based systems this is usually /etc/nagios3/conf.d:
 ```
-$ wget http://nagios-plugins.org/download/nagios-plugins-2.2.1.tar.gz
+$ mv zenduty_nagios.cfg /etc/nagios3/conf.d
 ```
-
-Extract the Nagios plugins from the folder.
-
+For RHEL-based systems this is usually /etc/nagios:
 ```
-$ tar xzf nagios-plugins-2.2.1.tar.gz
-$ cd nagios-plugins-2.2.1
+$ mv zenduty_nagios.cfg /etc/nagios
 ```
-
-Compile and install the plugin.
-
+For source installations, move the file to /usr/local/nagios/etc/objects:
 ```
-$ ./configure
-$ make
-$ make install
+$ mv zenduty_nagios.cfg /usr/local/nagios/etc/objects
 ```
-
-Depending on the version of the plugins, the permissions on the plugin directory and the plugins may need to be fixed at this point. If so run the following commands:
-
+5. Skip this step if you are using a Debian-based distribution. If you are using a RHEL-based distribution, you will need to edit the Nagios Core config to load the ZenDuty config. To do this, open /etc/nagios/nagios.cfg and add this line to the file:
 ```
-$ useradd nagios
-$ groupadd nagios
-$ usermod -a -G nagios nagios
-$ chown nagios.nagios /usr/local/nagios
-$ chown -R nagios.nagios /usr/local/nagios/
+$ cfg_file=/etc/nagios/zenduty_nagios.cfg
 ```
-**2. Installing xinetd:**
-	
-We will install xinetd using the following command. This may vary based on the OS.
-	
+If using a source installation, add this line to the main config file at /usr/local/nagios/etc/nagios.cfg
 ```
-$ apt-get install xinetd
+$ cfg_file=/usr/local/nagios/etc/objects/zenduty_nagios.cfg
 ```
-
-**3. Installing the NRPE daemon:**
-	
-Download the source code tarball of the NRPE addon. Make sure you have downloaded the latest version.
-
+6. Add the contact “zenduty” to your Nagios Core configuration’s main contact group. If you’re using the default configuration, open /etc/nagios3/conf.d/contacts_nagios2.cfg (onDebian-based systems) or /etc/nagios/objects/contacts.cfg (on RHEL-based systems) or/usr/local/nagios/etc/objects/contacts.cfg  (for source installations) and look for the “admins” contact group. Then, simply add the “zenduty” contact.
 ```
-$ cd ~/Downloads$ wget https://github.com/NagiosEnterprises/nrpe/releases/download/nrpe-   3.2.1/nrpe-3.2.1.tar.gz
-```
-
-Extract the tarball:
-
-```
-$ tar xzf nrpe-3.2.1.tar.gz
-$ cd nrpe-nrpe-3.2.1 
-```
-
-Compile the NRPE addon:
-
-```
-$ ./configure$ make all
-```
-
-Install the NRPE plugin (for testing), daemon, and sample daemon configuration file.
-
-```
-$ make install
-$ make install-config
-```
-If you want NRPE to run per-connection under inetd, xinetd, launchd, systemd, smf, etc. run the following command:
-
-```
-$ make install-inted
-```
-
-Make sure nrpe 5666/tcp is in your /etc/services file, if applicable. 
-If you want to run NRPE all the time under init, launchd, systemd, smf, etc. run the following command:
-```
-$ make install-init
-```
-
-**4. Testing the NRPE daemon locally:**
-
-It is time to see if things are working properly. Make sure the nrpe daemon is running:
-
-```
-$ netstat -at | egrep "nrpe|5666"
-```
-
-If the two lines below show up, then it means everything going good so far.
-
-```
-tcp    0  0 0.0.0.0:nrpe        0.0.0.0:*           LISTEN
-tcp6   0  0 [::]:nrpe           [::]:*               LISTEN
-``` 
-
-Else, make sure that:
-* You added the nrpe entry to your /etc/services file
-* The only_from directive in the /etc/xinetd.d/nrpe file contains an entry for "127.0.0.1"
-* xinetd is installed and started
-* The appropriate line in /etc/inetd.conf has been uncommented
-* Check the system log files for references about xinetd or nrpe and fix any problems that are reported.
-
-Next, check to make sure the NRPE daemon is functioning properly. To do this, run the check_nrpe plugin that was installed for testing purposes.
-
-```
-$ /usr/local/nagios/libexec/check_nrpe -H localhost
-```
-
-You should see the line below:
-
-```
-NRPE v3.2.1
-```
-
-**5. Open firewall rules:**
-
-If the server has a firewall running, you need to allow access to the NRPE port (5666) from the Nagios server. In Ubuntu, you would use the following commands:
-
-```
-$ iptables -I INPUT -p tcp -m tcp --dport 5666 -j ACCEPT
-$ service iptables save
-```
-
-On other systems and other firewalls, check the documentation or have an administrator open the port.At this point, you are done installing and configuring NRPE on the remote host. Now it is time to install a component and make some configuration entries on your monitoring server.
-
-### ON THE MONITORING HOST:
-
-On the monitoring host (the machine that runs Nagios), you'll need to do just a few things:
-* Install the check_nrpe plugin
-* Create a Nagios command definition for using the check_nrpe plugin
-* Create Nagios host and service definitions for monitoring the remote host
-
-These instructions assume that you have already installed Nagios on this machine according to the quickstart installation guide. The configuration examples that are given reference templates that are defined in the sample localhost.cfg and commands.cfg filesthat get installed if you follow the quickstart.
-
-**1. Installing the check_nrpe plugin:** 
-
-Download the source code tarball of the NRPE addon (visit https://www.nagios.org/downloads/nagios-core-addons/ for links to the latest versions). At the time of writing, the latest version of NRPE was 3.2.1.$ 
-
-```
-Scd ~/Downloads
-$ wget https://github.com/NagiosEnterprises/nrpe/releases/download/nrpe-   3.2.1/nrpe-3.2.1.tar.gz
-```
-
-Extract the source tarball.
-
-```
-$ tar xzf nrpe-3.2.1.tar.gz
-
-$ cd nrpe-nrpe-3.2.1
-```
-
-Compile the NRPE addon:
-
-```
-$ ./configure$ make check_nrpe
-```
-
-Install the NRPE plugin
-
-```
-$ make install-plugin
-```
-
-**2. Test communication with the NRPE daemon:** 
-
-Make sure the check_nrpe plugin can talk to the NRPE daemon on the remote host. Replace "192.168.0.1" in the command below with the IP address of the remote host that has NRPE installed. 
-
-```
-$ /usr/local/nagios/libexec/check_nrpe -H 192.168.0.1
-```
-
-Expected response:
-
-```
-NRPE v3.2.1
-```
-
-If the plugin returns a timeout error, check the following:
-* Make sure there isn't a firewall between the remote host and the monitoring server that is blocking communication
-* Make sure that the NRPE daemon is installed properly and running on the remote host
-* Make sure the remote host doesn't have local firewall rules that prevent the monitoring server from talking to the NRPE daemon
-
-**3. Creating a command definition:**
-
-You'll need to create a command definition in one of your Nagios object configuration files in order to use the check_nrpe plugin. Open the sample commands.cfg file for editing.
-
-```
-$ vim /usr/local/nagios/etc/objects/commands.cfg
-```
-
-and add the following definition to the file:
-
-```
-define command{
-	command_name check_nrpe
-	command_line $USER1$/check_nrpe -H $HOSTADDRESS$ -c $ARG1$
+define contactgroup{
+contactgroup_name admins
+alias Nagios Administrators
+members root,zenduty ; Add zenduty here
 }
 ```
-
-You are now ready to start adding services that should be monitored on the remote machine to the Nagios configuration.
-
-**4. Creating host and service definitions:**
-
-You'll need to create some object definitions in order to monitor the remote Linux/Unix machine. These definitions can be placed in their own file or added to an already existing object configuration file.
-
-First, its best practice to create a new template for each different type of host you'll be monitoring. Let's create a new template for linux boxes.
-
+7. Move zenduty_nagios.py to the Nagios plugin folder. For Debian-based systems this is usually /usr/lib/cgi-bin/nagios3/:
 ```
-define host{    
-	name                     linux-box                 ;Name of this template    
-	use                      generic-host              ;Inherit default values    
-	check_period         	 24x7    
-	check_interval        	 5    
-	retry_interval           1    
-	max_check_attempts  	 10    
-	check_command     		 check-host-alive    
-	notification_period   	 24x7   
-	notification_interval 	 30    
-	notification_options     d,r    
-	contact_groups        	 admins    
-	register                 0    						; DON’T REGISTER THIS - ITS A TEMPLATE
-	}
+$ mv zenduty_nagios.py /usr/lib/cgi-bin/nagios3/
 ```
-
-Next, define a new host for the remote Linux/Unix box that references the newly created linux-box host template.
+For most RHEL-based systems this is usually /usr/lib64/nagios/cgi/:
 ```
-define host{
-	use                 linux-box
-	host_name    		remotehost    
-	alias               Fedora Core 6    
-	address         	192.168.0.1
-	}
+$ mv zenduty_nagios.py /usr/lib64/nagios/cgi/
 ```
-**5. Restarting Nagios:** Restart Nagios using one of the commands below, or whatever is appropriate on your server.
+For Amazon Linux & CentOS 6+ systems this is usually /usr/local/nagios/sbin:
 ```
-$ service nagios restart
+$ mv zenduty_nagios.py /usr/local/nagios/sbin/
+```
+8. Make the zenduty_nagios.py file executable. For Debian-based systems:
+```
+$ chmod +x /usr/lib/cgi-bin/nagios3/zenduty_nagios.py
+```
+For most RHEL-based systems:
+```
+$ chmod +x /usr/lib64/nagios/cgi/zenduty_nagios.py
+```
+For Amazon Linux and CentOS 6+ systems:
+```
+$ chmod +x /usr/local/nagios/sbin/zenduty_nagios.py
+```
+9. Restart nagios service and your zenduty integration is finished!
+```
 $ systemctl restart nagios
-$ svcadm disable nrpe && svcadm enable nrpe
-$ /etc/rc.d/nrpe restart
 ```
-### RUNNING THE ZENDUTY - NAGIOS INTEGRATION SOFTWARE
-
-**1. Downloading the software:**
-
-Download the software from https://github.com/Zenduty/zd-nagios.git
-
-**2. Installing the software:**
-
-Extract the source code.
-```
-$ tar xvf NagiosZendutyIntegration.tar.gz
-$ cd NagiosZendutyIntegration.tar.gz
-```
-**3. Start Nagios Core:**
-
-Start Nagios core using the same command used to restart it in the previous sections, replacing “restart” with “start”.
-
-**4. Start the Zenduty Integration Software:**
-
-Run the executable file to begin monitoring it. The webhook URL with your integration key must be passed as a parameter, as shown below. Replace the URL below with your own
-
-```
-$ ./zenduty https://www.zenduty.com/api/integration/nagios/49152724-ec1a-475c-91b5-18bf8e390d93/
-
-```
-And that’s it! You’re system is now being monitored by Nagios and any alerts will be communicated to your zenduty account
