@@ -47,7 +47,7 @@ def main():
             "notification_source": args.notification_source,
             "fields": get_fields(args.field)
         }
-        url = "https://www.zenduty.com/api/integration/nagios/{}/".format(args.token)
+        url = "https://www.zenduty.com/api/integration/nagios/{0}/".format(args.token)
         data = json.dumps(data_to_send)
         req = urllib2.Request(url, data, {'Content-Type': 'application/json'})
         f = urllib2.urlopen(req)
