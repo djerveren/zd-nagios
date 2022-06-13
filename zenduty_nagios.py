@@ -1,9 +1,10 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 import sys, os
 import argparse
-import urllib2
+import urllib3
 import json
 
+http = urllib3.PoolManager()
 
 def build_arguments_parser(description):
     parser = argparse.ArgumentParser(description)
@@ -49,8 +50,8 @@ def main():
         }
         url = "https://www.zenduty.com/api/integration/nagios/{0}/".format(args.token)
         data = json.dumps(data_to_send)
-        req = urllib2.Request(url, data, {'Content-Type': 'application/json'})
-        f = urllib2.urlopen(req)
+        req = http.request(url, data, {'Content-Type': 'application/json'})
+        f = http.request.urlopen(req)
         response = f.read()
         f.close()
         exit(0)
