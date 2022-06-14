@@ -34,7 +34,7 @@ def get_fields(field_array):
         return {}
     to_ret=dict(f.split("=", 1) for f in field_array)
     return to_ret
-    
+
 
 def main():
     try:
