@@ -1,14 +1,15 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 import sys, os
 import argparse
-import urllib2
+import urllib3
 import json
 
+http = urllib3.PoolManager()
 
 def build_arguments_parser(description):
     parser = argparse.ArgumentParser(description)
 
-    parser.add_argument('-n', '--token', 
+    parser.add_argument('-n', '--token',
                         dest="token",
                         required=True,
                         help="Zenduty unique token assigned to this service")
@@ -25,7 +26,7 @@ def build_arguments_parser(description):
                         action="append",
                         dest="field",
                         help="additional fields/details to send")
-    return parser 
+    return parser
 
 
 def get_fields(field_array):
@@ -33,7 +34,6 @@ def get_fields(field_array):
         return {}
     to_ret=dict(f.split("=", 1) for f in field_array)
     return to_ret
-    
 
 
 def main():
@@ -49,10 +49,7 @@ def main():
         }
         url = "https://www.zenduty.com/api/integration/nagios/{0}/".format(args.token)
         data = json.dumps(data_to_send)
-        req = urllib2.Request(url, data, {'Content-Type': 'application/json'})
-        f = urllib2.urlopen(req)
-        response = f.read()
-        f.close()
+        req = http.request('POST', url, body=data, headers={'Content-Type': 'application/json'})
         exit(0)
     except Exception as e:
         print(str(e))
